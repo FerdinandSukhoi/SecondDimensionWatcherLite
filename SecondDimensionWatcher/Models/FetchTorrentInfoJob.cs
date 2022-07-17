@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Quartz;
+using SecondDimensionWatcher.Data;
 
-namespace SecondDimensionWatcher.Data
+namespace SecondDimensionWatcher.Models
 {
     public class FetchTorrentInfoJob : IJob
     {

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace SecondDimensionWatcher.Data
+namespace SecondDimensionWatcher.Models
 {
     public class DownloadDirectoryContent : DownloadContent
     {

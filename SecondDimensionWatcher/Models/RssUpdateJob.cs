@@ -2,7 +2,7 @@
 using Quartz;
 using SecondDimensionWatcher.Services;
 
-namespace SecondDimensionWatcher.Data
+namespace SecondDimensionWatcher.Models
 {
     public class RssUpdateJob : IJob
     {

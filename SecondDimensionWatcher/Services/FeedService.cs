@@ -30,7 +30,7 @@ namespace SecondDimensionWatcher.Services
             _http = client;
         }
 
-        private static AsyncLock Mutex { get; } = new();
+        private static SemaphoreSlim Mutex { get; } = new(1, 1);
 
         public async ValueTask RefreshAsync(CancellationToken cancellationToken)
         {

@@ -1,4 +1,4 @@
-﻿namespace SecondDimensionWatcher.Data
+﻿namespace SecondDimensionWatcher.Models
 {
     public class AppSettingModel
     {

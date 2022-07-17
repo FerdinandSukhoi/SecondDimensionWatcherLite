@@ -10,6 +10,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
 using SecondDimensionWatcher.Data;
+using SecondDimensionWatcher.Models;
 
 namespace SecondDimensionWatcher.Shared
 {
