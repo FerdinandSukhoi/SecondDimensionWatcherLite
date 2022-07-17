@@ -39,7 +39,7 @@ namespace SecondDimensionWatcher.Pages
 
         [Inject] public AppDataContext DbContext { get; set; }
 
-        [Inject] public HttpClient Http { get; set; }
+        [Inject] public QBitTorrentService QBitTorrent { get; set; }
         [Inject] public IJSRuntime JSRuntime { get; set; }
 
         public string ModalTitle { get; set; } = string.Empty;
@@ -55,7 +55,7 @@ namespace SecondDimensionWatcher.Pages
         public async ValueTask Delete()
         {
             var infoInDb = await DbContext.AnimationInfo.FindAsync(ToBeDelete.Id);
-            await Http.GetAsync("/api/v2/torrents/delete?deleteFiles=true&hashes=" + infoInDb.Hash);
+            if (infoInDb is null) return;
             infoInDb.IsTracked = false;
             Info = Array.Empty<AnimationInfo>();
             await DbContext.SaveChangesAsync();
@@ -65,11 +65,12 @@ namespace SecondDimensionWatcher.Pages
         protected override async Task OnInitializedAsync()
         {
             Info = await DbContext.AnimationInfo
-                .Where(a => !a.IsTracked)
-                .OrderByDescending(a => a.PublishTime)
-                .Take(10)
                 .ToArrayAsync();
-            TotalPage = (int) Math.Ceiling(
+            Info = Info.Where(a => !a.IsTracked)
+            .OrderByDescending(a => a.PublishTime)
+            .Take(10)
+            .ToArray();
+            TotalPage = (int)Math.Ceiling(
                 await DbContext.AnimationInfo.Where(a => !a.IsTracked).CountAsync() / 10d);
         }
 
@@ -118,15 +119,15 @@ namespace SecondDimensionWatcher.Pages
             Info = Array.Empty<AnimationInfo>();
             TotalPage = Selected switch
             {
-                Selector.Remote => (int) Math.Ceiling(
+                Selector.Remote => (int)Math.Ceiling(
                     await DbContext.AnimationInfo.Where(a => !a.IsTracked).CountAsync() / 10d),
-                Selector.Local => (int) Math.Ceiling(
+                Selector.Local => (int)Math.Ceiling(
                     await DbContext.AnimationInfo.Where(a => a.IsTracked).CountAsync() / 10d),
-                Selector.Downloading => (int) Math.Ceiling(
+                Selector.Downloading => (int)Math.Ceiling(
                     await DbContext.AnimationInfo
                         .Where(a => a.IsTracked && !a.IsFinished)
                         .CountAsync() / 10d),
-                Selector.Finished => (int) Math.Ceiling(
+                Selector.Finished => (int)Math.Ceiling(
                     await DbContext.AnimationInfo
                         .Where(a => a.IsFinished)
                         .CountAsync() / 10d),

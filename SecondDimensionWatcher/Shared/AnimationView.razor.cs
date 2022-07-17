@@ -2,10 +2,14 @@
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using BencodeNET.Objects;
+using BencodeNET.Parsing;
 using ByteSizeLib;
 using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -55,7 +59,7 @@ namespace SecondDimensionWatcher.Shared
         public string SpeedString => ByteSize.FromBytes(Info?.Speed ?? 0).ToString("#.#") + "/s";
 
         public TorrentStatus Status { get; set; }
-
+        [Inject] public QBitTorrentService QBitTorrent { get; set; }
         public Task FetchTask { get; set; }
         public CancellationTokenSource TokenSource { get; } = new();
 
@@ -125,7 +129,7 @@ namespace SecondDimensionWatcher.Shared
                     SetSuitableClass();
                     ProgressValue = Info.Progress;
                     StateHasChanged();
-                    await Task.Delay(100, token);
+                    await Task.Delay(1000, token);
                 }
             });
         }
@@ -138,12 +142,12 @@ namespace SecondDimensionWatcher.Shared
 
         public async ValueTask Pause()
         {
-            await Http.GetAsync("/api/v2/torrents/pause?hashes=" + AnimationInfo.Hash);
+            await QBitTorrent.Pause(AnimationInfo.Hash);
         }
 
         public async ValueTask Resume()
         {
-            await Http.GetAsync("/api/v2/torrents/pause?hashes=" + AnimationInfo.Hash);
+            await QBitTorrent.Resume(AnimationInfo.Hash);
         }
 
         public async Task OpenDetailPage()
@@ -159,23 +163,26 @@ namespace SecondDimensionWatcher.Shared
 
         public async ValueTask Download()
         {
-            var animationInfo = await DbContext.AnimationInfo.FindAsync(AnimationInfo.Id);
-            if (animationInfo.IsTracked)
+            var animationInfo = await DbContext.AnimationInfo.AsTracking().FirstOrDefaultAsync(
+                a=>a.Id== AnimationInfo.Id);
+            if (animationInfo is null|| animationInfo.TorrentData is not null)
                 return;
-            var content = new MultipartFormDataContent
-            {
-                {new ByteArrayContent(AnimationInfo.TorrentData), "torrent", $"{AnimationInfo.Hash}.torrent"}
-            };
-            var dir = Path.GetFullPath(Configuration["DownloadDir"]);
-            if (!string.IsNullOrWhiteSpace(dir))
-                content.Add(new StringContent(Path.GetFullPath(dir)), "savepath");
-            var response = await Http.PostAsync("/api/v2/torrents/add", content);
-            if (response.IsSuccessStatusCode)
+            animationInfo.TorrentData = await Http.GetByteArrayAsync(animationInfo.TorrentUrl);
+            var parser = new BencodeParser();
+            animationInfo.Hash = BitConverter
+                .ToString(SHA1.HashData(
+                    parser.Parse<BDictionary>(animationInfo.TorrentData)["info"]
+                        .EncodeAsBytes()))
+                .Replace("-", "");
+            await DbContext.SaveChangesAsync();
+            
+            if (await QBitTorrent.Add(animationInfo.TorrentData))
             {
                 animationInfo.IsTracked = true;
-                animationInfo.TrackTime = DateTimeOffset.Now;
+                animationInfo.TrackTime = DateTimeOffset.Now.ToUnixTimeSeconds();
                 await DbContext.SaveChangesAsync();
                 AnimationInfo.IsTracked = true;
+                AnimationInfo.Hash = animationInfo.Hash;
                 BeginTrack();
                 Logger.LogInformation($"The torrent {animationInfo.Description} successfully added.");
             }

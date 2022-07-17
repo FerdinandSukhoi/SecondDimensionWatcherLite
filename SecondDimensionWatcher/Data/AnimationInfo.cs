@@ -11,12 +11,13 @@ namespace SecondDimensionWatcher.Data
     {
         public string Id { get; set; }
         public string Description { get; set; }
-        public DateTimeOffset PublishTime { get; set; }
+        public long PublishTime { get; set; }
+        
         public string TorrentUrl { get; set; }
         public byte[] TorrentData { get; set; }
         public string Hash { get; set; }
         public bool IsTracked { get; set; } = false;
-        public DateTimeOffset TrackTime { get; set; }
+        public long TrackTime { get; set; }
         public bool IsFinished { get; set; } = false;
         public string StorePath { get; set; }
     }

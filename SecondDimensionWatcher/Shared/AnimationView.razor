@@ -2,7 +2,7 @@
     <div class="card-body">
         <h5 class="card-title">@AnimationInfo.Id</h5>
         <p class="card-subtitle mb-2 text-muted">
-            <i class="bi bi-clock"></i>&nbsp;发布时间：@AnimationInfo.PublishTime.ToString("f")
+            <i class="bi bi-clock"></i>&nbsp;发布时间：@DateTimeOffset.FromUnixTimeSeconds(AnimationInfo.PublishTime).ToString("f")
         </p>
 
         @if (AnimationInfo.IsTracked)

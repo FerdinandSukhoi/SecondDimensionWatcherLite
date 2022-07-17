@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using SecondDimensionWatcher.Data;
+using SecondDimensionWatcher.Services;
 
 namespace SecondDimensionWatcher.Pages
 {
@@ -27,8 +28,7 @@ namespace SecondDimensionWatcher.Pages
 
         [Inject] public IJSRuntime JSRuntime { get; set; }
         [Inject] public AppDataContext DbContext { get; set; }
-        [Inject] public HttpClient Http { get; set; }
-
+        [Inject] public QBitTorrentService QBitTorrent{ get; set; }
         public IEnumerable<AnimationInfo> AnimationInfos { get; set; } = Array.Empty<AnimationInfo>();
 
         public string ModalTitle { get; set; } = string.Empty;
@@ -70,7 +70,8 @@ namespace SecondDimensionWatcher.Pages
         public async ValueTask Delete()
         {
             var infoInDb = await DbContext.AnimationInfo.FindAsync(ToBeDelete.Id);
-            await Http.GetAsync("/api/v2/torrents/delete?deleteFiles=true&hashes=" + infoInDb.Hash);
+            if (infoInDb is null) return;
+            if (!await QBitTorrent.Delete(infoInDb.Hash)) return;
             infoInDb.IsTracked = false;
             AnimationInfos = Array.Empty<AnimationInfo>();
             await DbContext.SaveChangesAsync();

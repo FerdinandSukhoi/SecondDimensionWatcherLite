@@ -15,7 +15,7 @@ using SecondDimensionWatcher.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Configuration.AddJsonFile("app.json", false, true);
+builder.Configuration.AddJsonFile("app.json", false, true);
 
 var services = builder.Services;
 
@@ -31,15 +31,11 @@ var provider = new FileExtensionContentTypeProvider();
 provider.Mappings.Add(".mkv", "video/webm");
 services.AddSingleton(provider);
 
-services.AddHttpClient<FeedService>(http =>
-{
-    http.BaseAddress = new(builder.Configuration["DownloadSetting:BaseAddress"]);
-    http.DefaultRequestHeaders.UserAgent.Add(
-        new("SecondDimensionWatcherLite", "1.0"));
-});
+services.AddHttpClient();
 services.AddMemoryCache();
 services.AddScoped<BlazorContext>();
 services.AddTransient<FeedService>();
+services.AddSingleton<QBitTorrentService>();
 services.AddQuartz(q =>
 {
     q.UseMicrosoftDependencyInjectionJobFactory();
@@ -57,13 +53,14 @@ services.AddQuartz(q =>
 services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
 var app = builder.Build();
+var tempScope = app.Services.CreateScope();
+var dataContext = tempScope.ServiceProvider.GetRequiredService<AppDataContext>();
 
-var dataContext = app.Services.GetRequiredService<AppDataContext>();
 if (builder.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 
 dataContext.Database.Migrate();
-
+tempScope.Dispose();
 app.UseStaticFiles();
 
 app.UseRouting();

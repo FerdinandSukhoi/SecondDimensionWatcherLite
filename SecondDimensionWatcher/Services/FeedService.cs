@@ -30,6 +30,7 @@ namespace SecondDimensionWatcher.Services
             _http = client;
         }
 
+        private const string MikananiXml = "https://mikanani.me/0.1/";
         private static SemaphoreSlim Mutex { get; } = new(1, 1);
 
         public async ValueTask RefreshAsync(CancellationToken cancellationToken)
@@ -40,30 +41,25 @@ namespace SecondDimensionWatcher.Services
             {
                 var feed = await FeedReader.ReadAsync(feedUrl, cancellationToken);
                 _logger.LogInformation($"Fetch {feed.Items.Count} items from remote.");
-                var list = (from item in feed.Items
+                var list = 
+                    from item in feed.Items
                     let element = item.SpecificItem.Element
-                    let torrentDate = element.Element("{https://mikanani.me/0.1/}torrent")
-                        ?.Element("{https://mikanani.me/0.1/}pubDate")
+                    let torrentDate = element.Element($"{{{MikananiXml}}}torrent")
+                        ?.Element($"{{{MikananiXml}}}pubDate")
                         ?.Value
                     let url = element.Element("enclosure")?.Attribute("url")?.Value
                     select new AnimationInfo
                     {
                         Id = item.Id,
                         Description = item.Description,
-                        PublishTime = DateTimeOffset.Parse(torrentDate),
+                        PublishTime = DateTimeOffset.Parse(torrentDate).ToUnixTimeSeconds(),
                         TorrentUrl = url
-                    }).ToList();
+                    };
 
                 foreach (var content in list)
                     if (await _dataContext.AnimationInfo.FindAsync(content.Id) == null)
                     {
-                        content.TorrentData = await _http.GetByteArrayAsync(content.TorrentUrl, cancellationToken);
-                        var parser = new BencodeParser();
-                        content.Hash = BitConverter
-                            .ToString(SHA1.HashData(
-                                parser.Parse<BDictionary>(content.TorrentData)["info"]
-                                    .EncodeAsBytes()))
-                            .Replace("-", "");
+
                         await _dataContext.AddAsync(content, cancellationToken);
                     }
             }

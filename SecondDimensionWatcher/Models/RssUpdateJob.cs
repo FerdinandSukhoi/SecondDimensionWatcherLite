@@ -2,20 +2,19 @@
 using Quartz;
 using SecondDimensionWatcher.Services;
 
-namespace SecondDimensionWatcher.Models
+namespace SecondDimensionWatcher.Models;
+
+public class RssUpdateJob : IJob
 {
-    public class RssUpdateJob : IJob
+    private readonly FeedService _feedService;
+
+    public RssUpdateJob(FeedService feedService)
     {
-        private readonly FeedService _feedService;
+        _feedService = feedService;
+    }
 
-        public RssUpdateJob(FeedService feedService)
-        {
-            _feedService = feedService;
-        }
-
-        public async Task Execute(IJobExecutionContext context)
-        {
-            await _feedService.RefreshAsync(default);
-        }
+    public async Task Execute(IJobExecutionContext context)
+    {
+        await _feedService.RefreshAsync(default);
     }
 }
